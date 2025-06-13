@@ -11,6 +11,8 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
 import { BlacklistedToken } from './entities/blacklisted-token.entity';
+import { LogsService } from '../logs/logs.service';
+import { TipoActividad } from '../logs/entities/log-actividad.entity';
 
 export interface UserResponse {
   id: number;
@@ -35,6 +37,7 @@ export class AuthService {
     @InjectRepository(BlacklistedToken)
     private blacklistedTokenRepository: Repository<BlacklistedToken>,
     private jwtService: JwtService,
+    private logsService: LogsService,
   ) {}
 
   async findAll() {
@@ -110,6 +113,16 @@ export class AuthService {
       email: savedUser.email,
     });
 
+    // Registrar la actividad
+    await this.logsService.registrarActividad(
+      TipoActividad.CREACION,
+      'Usuario registrado',
+      savedUser,
+      'User',
+      savedUser.id,
+      { email, nombre, apellido }
+    );
+
     return { user: savedUser, token };
   }
 
@@ -144,12 +157,31 @@ export class AuthService {
 
       const roles = userRoles.map(ur => ur.role.name);
 
+      console.log('Generando token para usuario:', {
+        id: user.id,
+        email: user.email,
+        roles: roles
+      });
+
       // Generar el token JWT
       const token = this.jwtService.sign({ 
         sub: user.id,
         email: user.email,
         roles: roles
       });
+
+      // Verificar el token generado
+      const decodedToken = this.jwtService.verify(token);
+      console.log('Token generado y decodificado:', decodedToken);
+
+      // Registrar la actividad
+      await this.logsService.registrarActividad(
+        TipoActividad.LOGIN,
+        'Inicio de sesión',
+        user,
+        'User',
+        user.id
+      );
 
       // Retornar solo los datos necesarios
       const userResponse: UserResponse = {
@@ -203,6 +235,22 @@ export class AuthService {
       // Verificar que el token sea válido
       const decoded = this.jwtService.verify(token);
       
+      // Obtener el usuario
+      const user = await this.usersRepository.findOne({
+        where: { id: decoded.sub }
+      });
+
+      if (user) {
+        // Registrar la actividad
+        await this.logsService.registrarActividad(
+          TipoActividad.LOGOUT,
+          'Cierre de sesión',
+          user,
+          'User',
+          user.id
+        );
+      }
+
       // Guardar el token en la lista negra
       const blacklistedToken = this.blacklistedTokenRepository.create({
         token

@@ -32,6 +32,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(request: any, payload: any) {
+    console.log('Payload del token:', payload);
+    
     // Obtener el token del header
     const token = request.headers.authorization?.split(' ')[1];
     
@@ -42,10 +44,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const user = await this.usersRepository.findOne({
       where: { id: payload.sub },
+      relations: ['people', 'userRoles', 'userRoles.role'],
     });
 
+    console.log('Usuario encontrado:', user);
+
     if (!user) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Usuario no encontrado');
     }
 
     // Obtener los roles del usuario
