@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, Headers } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, Headers, ForbiddenException, Param } from '@nestjs/common';
 import { AuthService, UserResponse } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -34,9 +34,10 @@ export class AuthController {
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req): Promise<UserProfileDto> {
-    console.log('Token decodificado:', req.user);
-    return this.authService.getProfile(req.user.sub);
+  async getProfile(@Request() req) {
+    console.log('Token recibido en el controlador:', req.headers.authorization);
+    console.log('Usuario en el controlador:', req.user);
+    return this.authService.getProfile(req.user.id);
   }
 
   @Get('users')
@@ -44,5 +45,12 @@ export class AuthController {
   @Roles(ROLES.ADMIN)
   async getAllUsers() {
     return this.authService.findAll();
+  }
+
+  @Get('users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  async getUserProfile(@Request() req, @Param('id') userId: string) {
+    return this.authService.getProfile(+userId);
   }
 } 

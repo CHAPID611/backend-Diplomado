@@ -11,6 +11,7 @@ import { UserRole } from './entities/user-role.entity';
 import { People } from './entities/people.entity';
 import { BlacklistedToken } from './entities/blacklisted-token.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { LogsModule } from '../logs/logs.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       }),
       inject: [ConfigService],
     }),
+    LogsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
