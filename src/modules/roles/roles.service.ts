@@ -51,8 +51,8 @@ export class RolesService {
     return userRoles.map(ur => ({
       id: ur.user.id,
       email: ur.user.email,
-      nombre: ur.user.people?.nombre,
-      apellido: ur.user.people?.apellido,
+      nombre: ur.user.people?.name,
+      apellido: ur.user.people?.lastName,
       createdAt: ur.user.createdAt
     }));
   }
@@ -116,16 +116,6 @@ export class RolesService {
       {
         name: ROLES.OPERADOR,
         description: 'Operador del sistema',
-        permissions: [
-          {
-            resource: 'users',
-            actions: ['read'],
-          },
-        ],
-      },
-      {
-        name: ROLES.USUARIO,
-        description: 'Usuario básico',
         permissions: [
           {
             resource: 'users',

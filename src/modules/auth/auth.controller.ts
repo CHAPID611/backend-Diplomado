@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, Headers, ForbiddenException, Param } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, Headers, ForbiddenException, Param, Put, Delete } from '@nestjs/common';
 import { AuthService, UserResponse } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -7,6 +7,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { ROLES } from '../roles/constants/roles.constants';
 import { UserProfileDto } from './dto/user-profile.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -50,7 +51,25 @@ export class AuthController {
   @Get('users/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(ROLES.ADMIN)
-  async getUserProfile(@Request() req, @Param('id') userId: string) {
-    return this.authService.getProfile(+userId);
+  async getUserProfile(@Param('id') userId: string) {
+    return this.authService.findOne(+userId);
+  }
+
+  @Put('users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  async updateUser(
+    @Param('id') userId: string,
+    @Body() updateUserDto: UpdateUserDto
+  ) {
+    return this.authService.updateUser(+userId, updateUserDto);
+  }
+
+  @Delete('users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLES.ADMIN)
+  async deleteUser(@Param('id') userId: string) {
+    await this.authService.deleteUser(+userId);
+    return { message: 'Usuario eliminado exitosamente' };
   }
 } 

@@ -1,16 +1,16 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
 import { User } from './user.entity';
 
-@Entity('people')
+@Entity()
 export class People {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  nombre: string;
+  name: string;
 
   @Column()
-  apellido: string;
+  lastName: string;
 
   @OneToOne(() => User, user => user.people)
   user: User;
