@@ -1,8 +1,8 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne, JoinColumn } from 'typeorm';
-import { UserRole } from './user-role.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, OneToMany, JoinColumn } from 'typeorm';
 import { People } from './people.entity';
+import { UserRole } from './user-role.entity';
 
-@Entity('users')
+@Entity()
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -13,11 +13,17 @@ export class User {
   @Column()
   password: string;
 
-  @OneToOne(() => People, people => people.user)
+  @OneToOne(() => People, people => people.user, { 
+    cascade: ['insert', 'update', 'remove'],
+    eager: true 
+  })
   @JoinColumn()
   people: People;
 
-  @OneToMany(() => UserRole, userRole => userRole.user)
+  @OneToMany(() => UserRole, userRole => userRole.user, { 
+    cascade: ['insert', 'update', 'remove'],
+    onDelete: 'CASCADE'
+  })
   userRoles: UserRole[];
 
   @CreateDateColumn()
