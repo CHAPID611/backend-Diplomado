@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { UserRole } from '../entities/user-role.entity';
+import { JwtPayload } from '../interfaces/jwt-payload.interface';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -16,19 +17,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     @InjectRepository(UserRole)
     private userRolesRepository: Repository<UserRole>,
   ) {
-    const jwtSecret = configService.get<string>('JWT_SECRET');
-    if (!jwtSecret) {
-      throw new UnauthorizedException('JWT_SECRET no está configurado');
-    }
-
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: jwtSecret,
+      secretOrKey: process.env.JWT_SECRET || 'tu_clave_secreta',
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: JwtPayload) {
+    console.log('Validando payload JWT:', payload);
+    if (!payload) {
+      throw new UnauthorizedException('Token inválido');
+    }
     const user = await this.userRepository.findOne({
       where: { id: payload.sub },
       relations: ['userRoles', 'userRoles.role']
