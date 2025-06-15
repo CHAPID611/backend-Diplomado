@@ -9,6 +9,7 @@ import { EmergencyFile } from './entities/emergency-file.entity';
 import { UpdateEmergencyDto } from './dto/update-emergency.dto';
 import { QueryEmergencyDto, PeriodFilter } from './dto/query-emergency.dto';
 import { addDays, addMonths, subDays, subMonths } from 'date-fns';
+import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class EmergenciesService {
@@ -23,30 +24,44 @@ export class EmergenciesService {
     private readonly emergencyFileRepository: Repository<EmergencyFile>,
   ) {}
 
-  async create(createEmergencyDto: CreateEmergencyDto, fileUrl?: string): Promise<Emergency> {
+  async create(createEmergencyDto: CreateEmergencyDto, uploadedFiles: UploadApiResponse[]): Promise<Emergency> {
+    if (!uploadedFiles || uploadedFiles.length < 2) {
+      throw new BadRequestException('Se requieren al menos dos fotografías');
+    }
+
     const user = await this.userRepository.findOne({ where: { id: createEmergencyDto.userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
     const emergencyType = await this.emergencyTypeRepository.findOne({ where: { emergencyTypeId: createEmergencyDto.emergencyType } });
     if (!emergencyType) throw new NotFoundException('Tipo de emergencia no encontrado');
 
-    let emergencyFile: EmergencyFile | undefined = undefined;
-    if (fileUrl) {
-      emergencyFile = this.emergencyFileRepository.create({ file: fileUrl });
-      await this.emergencyFileRepository.save(emergencyFile);
-    } else if (createEmergencyDto.emergencyFile) {
-      const foundFile = await this.emergencyFileRepository.findOne({ where: { emergencyFileId: createEmergencyDto.emergencyFile } });
-      if (!foundFile) throw new NotFoundException('Archivo de emergencia no encontrado');
-      emergencyFile = foundFile;
-    }
-
     const emergency = this.emergencyRepository.create({
       ...createEmergencyDto,
       user,
       emergencyType,
-      emergencyFile,
     });
-    return this.emergencyRepository.save(emergency);
+
+    const savedEmergency = await this.emergencyRepository.save(emergency);
+
+    // Guardar los archivos
+    for (const file of uploadedFiles) {
+      const emergencyFile = this.emergencyFileRepository.create({
+        file: file.secure_url,
+        emergency: savedEmergency
+      });
+      await this.emergencyFileRepository.save(emergencyFile);
+    }
+
+    const foundEmergency = await this.emergencyRepository.findOne({
+      where: { emergencyId: savedEmergency.emergencyId },
+      relations: ['user', 'emergencyType', 'emergencyFiles']
+    });
+
+    if (!foundEmergency) {
+      throw new NotFoundException('Error al recuperar la emergencia creada');
+    }
+
+    return foundEmergency;
   }
 
   private getDateRange(period: PeriodFilter, startDate?: string, endDate?: string) {
@@ -95,7 +110,7 @@ export class EmergenciesService {
       .createQueryBuilder('emergency')
       .leftJoinAndSelect('emergency.user', 'user')
       .leftJoinAndSelect('emergency.emergencyType', 'emergencyType')
-      .leftJoinAndSelect('emergency.emergencyFile', 'emergencyFile')
+      .leftJoinAndSelect('emergency.emergencyFiles', 'emergencyFiles')
       .where('emergency.emergencyDate BETWEEN :start AND :end', { start, end });
 
     if (emergencyTypeId) {

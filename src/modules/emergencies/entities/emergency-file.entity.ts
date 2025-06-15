@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Emergency } from './emergency.entity';
 
 @Entity('emergencyFiles')
@@ -6,9 +6,13 @@ export class EmergencyFile {
   @PrimaryGeneratedColumn()
   emergencyFileId: number;
 
-  @Column({ type: 'varchar', length: 1000 })
+  @Column({ length: 1000 })
   file: string;
 
-  @OneToMany(() => Emergency, emergency => emergency.emergencyFile)
-  emergencies: Emergency[];
+  @ManyToOne(() => Emergency)
+  @JoinColumn({ name: 'emergencyId' })
+  emergency: Emergency;
+
+  @Column()
+  emergencyId: number;
 } 
