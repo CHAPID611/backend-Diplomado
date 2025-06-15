@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, OneToOne } from 'typeorm';
 import { User } from '../../../modules/auth/entities/user.entity';
 import { EmergencyType } from './emergency-type.entity';
 import { EmergencyFile } from './emergency-file.entity';
@@ -21,8 +21,8 @@ export class Emergency {
   @JoinColumn({ name: 'emergencyFile' })
   emergencyFile: EmergencyFile;
 
-  @Column({ length: 50 })
-  emergencyDate: string;
+  @Column({ type: 'datetime' })
+  emergencyDate: Date;
 
   @Column({ length: 50 })
   informant: string;
@@ -36,20 +36,35 @@ export class Emergency {
   @Column({ length: 50 })
   turn: string;
 
-  @Column({ length: 50 })
-  reportTime: string;
+  @Column({ type: 'datetime' })
+  reportTime: Date;
 
-  @Column({ length: 50 })
-  departureTime: string;
+  @Column({ type: 'text' })
+  reportTimeDescription: string;
 
-  @Column({ length: 50 })
-  arrivalSceneTime: string;
+  @Column({ type: 'datetime' })
+  departureTime: Date;
 
-  @Column({ length: 50 })
-  arrivalHospitalTime: string;
+  @Column({ type: 'text' })
+  departureTimeDescription: string;
 
-  @Column({ length: 50 })
-  returnEstationTime: string;
+  @Column({ type: 'datetime' })
+  arrivalSceneTime: Date;
+
+  @Column({ type: 'text' })
+  arrivalSceneTimeDescription: string;
+
+  @Column({ type: 'datetime' })
+  arrivalHospitalTime: Date;
+
+  @Column({ type: 'text' })
+  arrivalHospitalTimeDescription: string;
+
+  @Column({ type: 'datetime' })
+  returnEstationTime: Date;
+
+  @Column({ type: 'text' })
+  returnEstationTimeDescription: string;
 
   @Column({ length: 50 })
   unitsResponse: string;
