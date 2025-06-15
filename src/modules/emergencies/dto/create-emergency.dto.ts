@@ -37,21 +37,21 @@ export class CreateEmergencyDto {
   @IsString()
   departureTimeDescription: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsDateString()
-  arrivalSceneTime: string;
+  arrivalSceneTime?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  arrivalSceneTimeDescription: string;
+  arrivalSceneTimeDescription?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsDateString()
-  arrivalHospitalTime: string;
+  arrivalHospitalTime?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  arrivalHospitalTimeDescription: string;
+  arrivalHospitalTimeDescription?: string;
 
   @IsNotEmpty()
   @IsDateString()

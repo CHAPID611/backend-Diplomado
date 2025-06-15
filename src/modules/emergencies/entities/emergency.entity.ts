@@ -53,16 +53,16 @@ export class Emergency {
   @Column({ type: 'text' })
   departureTimeDescription: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'datetime', nullable: true })
   arrivalSceneTime: Date;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   arrivalSceneTimeDescription: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'datetime', nullable: true })
   arrivalHospitalTime: Date;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   arrivalHospitalTimeDescription: string;
 
   @Column({ type: 'datetime' })
