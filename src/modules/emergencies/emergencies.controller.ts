@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EmergenciesService } from './emergencies.service';
 import { CreateEmergencyDto } from './dto/create-emergency.dto';
 import { UpdateEmergencyDto } from './dto/update-emergency.dto';
+import { QueryEmergencyDto } from './dto/query-emergency.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -34,8 +35,8 @@ export class EmergenciesController {
 
   @Get()
   @Roles(ROLES.OPERADOR, ROLES.ADMIN)
-  findAll() {
-    return this.emergenciesService.findAll();
+  findAll(@Query() query: QueryEmergencyDto) {
+    return this.emergenciesService.findAll(query);
   }
 
   @Get(':id')
