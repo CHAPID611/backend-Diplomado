@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { EmergenciesService } from './emergencies.service';
 import { CreateEmergencyDto } from './dto/create-emergency.dto';
 import { UpdateEmergencyDto } from './dto/update-emergency.dto';
@@ -20,17 +20,15 @@ export class EmergenciesController {
 
   @Post()
   @Roles(ROLES.OPERADOR, ROLES.ADMIN)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('file', 10))
   async create(
     @Body() createEmergencyDto: CreateEmergencyDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
   ) {
-    let fileUrl: string | undefined = undefined;
-    if (file) {
-      const uploadResult = await this.cloudinaryService.uploadImage(file);
-      fileUrl = uploadResult.secure_url;
-    }
-    return this.emergenciesService.create(createEmergencyDto, fileUrl);
+    const uploadedFiles = await Promise.all(
+      files.map(file => this.cloudinaryService.uploadImage(file))
+    );
+    return this.emergenciesService.create(createEmergencyDto, uploadedFiles);
   }
 
   @Get()

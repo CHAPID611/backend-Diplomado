@@ -9,17 +9,22 @@ export class Emergency {
   @PrimaryGeneratedColumn()
   emergencyId: number;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User)
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @ManyToOne(() => EmergencyType, { eager: true })
+  @Column()
+  userId: number;
+
+  @ManyToOne(() => EmergencyType)
   @JoinColumn({ name: 'emergencyType' })
   emergencyType: EmergencyType;
 
-  @ManyToOne(() => EmergencyFile, { eager: true })
-  @JoinColumn({ name: 'emergencyFile' })
-  emergencyFile: EmergencyFile;
+  @Column()
+  emergencyTypeId: number;
+
+  @OneToMany(() => EmergencyFile, emergencyFile => emergencyFile.emergency)
+  emergencyFiles: EmergencyFile[];
 
   @Column({ type: 'datetime' })
   emergencyDate: Date;
