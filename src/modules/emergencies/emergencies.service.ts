@@ -27,15 +27,15 @@ export class EmergenciesService {
     const user = await this.userRepository.findOne({ where: { id: createEmergencyDto.userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    const emergencyType = await this.emergencyTypeRepository.findOne({ where: { emergencyTypeId: createEmergencyDto.emergencyTypeId } });
+    const emergencyType = await this.emergencyTypeRepository.findOne({ where: { emergencyTypeId: createEmergencyDto.emergencyType } });
     if (!emergencyType) throw new NotFoundException('Tipo de emergencia no encontrado');
 
     let emergencyFile: EmergencyFile | undefined = undefined;
     if (fileUrl) {
       emergencyFile = this.emergencyFileRepository.create({ file: fileUrl });
       await this.emergencyFileRepository.save(emergencyFile);
-    } else if (createEmergencyDto.emergencyFileId) {
-      const foundFile = await this.emergencyFileRepository.findOne({ where: { emergencyFileId: createEmergencyDto.emergencyFileId } });
+    } else if (createEmergencyDto.emergencyFile) {
+      const foundFile = await this.emergencyFileRepository.findOne({ where: { emergencyFileId: createEmergencyDto.emergencyFile } });
       if (!foundFile) throw new NotFoundException('Archivo de emergencia no encontrado');
       emergencyFile = foundFile;
     }
@@ -115,8 +115,20 @@ export class EmergenciesService {
     return this.emergencyRepository.findOne({ where: { emergencyId: id } });
   }
 
-  update(id: number, updateEmergencyDto: UpdateEmergencyDto) {
-    return this.emergencyRepository.update(id, updateEmergencyDto);
+  async update(id: number, updateEmergencyDto: UpdateEmergencyDto) {
+    const emergency = await this.emergencyRepository.findOne({ where: { emergencyId: id } });
+    if (!emergency) throw new NotFoundException('Emergencia no encontrada');
+
+    if (updateEmergencyDto.emergencyType) {
+      const emergencyType = await this.emergencyTypeRepository.findOne({ 
+        where: { emergencyTypeId: updateEmergencyDto.emergencyType } 
+      });
+      if (!emergencyType) throw new NotFoundException('Tipo de emergencia no encontrado');
+      emergency.emergencyType = emergencyType;
+    }
+
+    Object.assign(emergency, updateEmergencyDto);
+    return this.emergencyRepository.save(emergency);
   }
 
   remove(id: number) {

@@ -106,7 +106,7 @@ export class AuthService {
     const savedUser = await this.userRepository.save(user);
 
     // Generar token
-    const token = this.jwtService.sign({
+    const token = this.jwtService.sign({ 
       sub: savedUser.id,
       email: savedUser.email,
       roles: savedUser.userRoles.map(ur => ur.role.name),
@@ -428,4 +428,4 @@ export class AuthService {
       await this.peopleRepository.remove(peopleToDelete);
     }
   }
-}
+} 
