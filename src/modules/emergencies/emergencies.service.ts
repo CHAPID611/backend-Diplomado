@@ -25,10 +25,6 @@ export class EmergenciesService {
   ) {}
 
   async create(createEmergencyDto: CreateEmergencyDto, uploadedFiles: UploadApiResponse[]): Promise<Emergency> {
-    if (!uploadedFiles || uploadedFiles.length < 2) {
-      throw new BadRequestException('Se requieren al menos dos fotografías');
-    }
-
     const user = await this.userRepository.findOne({ where: { id: createEmergencyDto.userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
@@ -43,13 +39,15 @@ export class EmergenciesService {
 
     const savedEmergency = await this.emergencyRepository.save(emergency);
 
-    // Guardar los archivos
-    for (const file of uploadedFiles) {
-      const emergencyFile = this.emergencyFileRepository.create({
-        file: file.secure_url,
-        emergency: savedEmergency
-      });
-      await this.emergencyFileRepository.save(emergencyFile);
+    // Guardar los archivos solo si se proporcionaron
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      for (const file of uploadedFiles) {
+        const emergencyFile = this.emergencyFileRepository.create({
+          file: file.secure_url,
+          emergency: savedEmergency
+        });
+        await this.emergencyFileRepository.save(emergencyFile);
+      }
     }
 
     const foundEmergency = await this.emergencyRepository.findOne({
@@ -127,7 +125,10 @@ export class EmergenciesService {
   }
 
   findOne(id: number) {
-    return this.emergencyRepository.findOne({ where: { emergencyId: id } });
+    return this.emergencyRepository.findOne({ 
+      where: { emergencyId: id },
+      relations: ['user', 'emergencyType', 'emergencyFiles', 'emergenciesNovelties', 'emergenciesNovelties.novelty']
+    });
   }
 
   async update(id: number, updateEmergencyDto: UpdateEmergencyDto) {
