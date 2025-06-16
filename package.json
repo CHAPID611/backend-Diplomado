@@ -18,7 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed": "ts-node src/database/seeds/run-seed.ts"
+    "seed": "ts-node src/database/seeds/run-seed.ts",
+    "typeorm": "typeorm-ts-node-commonjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -39,6 +40,7 @@
     "class-validator": "^0.14.2",
     "cloudinary": "^1.41.3",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
     "mysql2": "^3.14.1",

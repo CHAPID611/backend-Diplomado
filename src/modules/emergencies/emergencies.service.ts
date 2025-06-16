@@ -6,6 +6,8 @@ import { CreateEmergencyDto } from './dto/create-emergency.dto';
 import { User } from '../auth/entities/user.entity';
 import { EmergencyType } from './entities/emergency-type.entity';
 import { EmergencyFile } from './entities/emergency-file.entity';
+import { Novelty } from './entities/novelty.entity';
+import { EmergenciesNovelty } from './entities/emergencies-novelty.entity';
 import { UpdateEmergencyDto } from './dto/update-emergency.dto';
 import { QueryEmergencyDto, PeriodFilter } from './dto/query-emergency.dto';
 import { addDays, addMonths, subDays, subMonths } from 'date-fns';
@@ -22,6 +24,10 @@ export class EmergenciesService {
     private readonly emergencyTypeRepository: Repository<EmergencyType>,
     @InjectRepository(EmergencyFile)
     private readonly emergencyFileRepository: Repository<EmergencyFile>,
+    @InjectRepository(Novelty)
+    private readonly noveltyRepository: Repository<Novelty>,
+    @InjectRepository(EmergenciesNovelty)
+    private readonly emergenciesNoveltyRepository: Repository<EmergenciesNovelty>,
   ) {}
 
   async create(createEmergencyDto: CreateEmergencyDto, uploadedFiles: UploadApiResponse[]): Promise<Emergency> {
@@ -31,8 +37,11 @@ export class EmergenciesService {
     const emergencyType = await this.emergencyTypeRepository.findOne({ where: { emergencyTypeId: createEmergencyDto.emergencyType } });
     if (!emergencyType) throw new NotFoundException('Tipo de emergencia no encontrado');
 
+    // Extraer novedades del DTO
+    const { novedades, ...emergencyData } = createEmergencyDto;
+
     const emergency = this.emergencyRepository.create({
-      ...createEmergencyDto,
+      ...emergencyData,
       user,
       emergencyType,
     });
@@ -50,9 +59,25 @@ export class EmergenciesService {
       }
     }
 
+    // Guardar novedades y asociarlas a la emergencia si se proporcionaron
+    if (novedades && novedades.length > 0) {
+      for (const noveltyDto of novedades) {
+        // Crear la novedad
+        const novelty = this.noveltyRepository.create(noveltyDto);
+        const savedNovelty = await this.noveltyRepository.save(novelty);
+
+        // Asociar la novedad a la emergencia
+        const emergencyNovelty = this.emergenciesNoveltyRepository.create({
+          emergency: savedEmergency,
+          novelty: savedNovelty
+        });
+        await this.emergenciesNoveltyRepository.save(emergencyNovelty);
+      }
+    }
+
     const foundEmergency = await this.emergencyRepository.findOne({
       where: { emergencyId: savedEmergency.emergencyId },
-      relations: ['user', 'emergencyType', 'emergencyFiles']
+      relations: ['user', 'emergencyType', 'emergencyFiles', 'emergenciesNovelties', 'emergenciesNovelties.novelty']
     });
 
     if (!foundEmergency) {

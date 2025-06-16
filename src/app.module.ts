@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { PersonalModule } from './modules/personal/personal.module';
 import { EmergenciesModule } from './modules/emergencies/emergencies.module';
 
 @Module({
@@ -26,6 +27,7 @@ import { EmergenciesModule } from './modules/emergencies/emergencies.module';
     }),
     AuthModule,
     RolesModule,
+    PersonalModule,
     EmergenciesModule,
   ],
 })

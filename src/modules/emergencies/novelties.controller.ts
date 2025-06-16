@@ -23,6 +23,12 @@ export class NoveltiesController {
     return this.noveltiesService.findAll();
   }
 
+  @Get('temporales')
+  @Roles(ROLES.OPERADOR, ROLES.ADMIN)
+  findTemporary() {
+    return this.noveltiesService.findTemporary();
+  }
+
   @Get(':id')
   @Roles(ROLES.OPERADOR, ROLES.ADMIN)
   findOne(@Param('id') id: string) {

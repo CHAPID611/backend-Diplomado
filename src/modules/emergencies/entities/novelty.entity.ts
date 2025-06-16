@@ -6,13 +6,13 @@ export class Novelty {
   @PrimaryGeneratedColumn()
   noveltyId: number;
 
-  @Column({ length: 50 })
+  @Column({ length: 100 })
   novelty: string;
 
   @Column({ length: 50 })
   noveltyDate: string;
 
-  @Column({ length: 50 })
+  @Column({ length: 100 })
   description: string;
 
   @OneToMany(() => EmergenciesNovelty, en => en.novelty)
