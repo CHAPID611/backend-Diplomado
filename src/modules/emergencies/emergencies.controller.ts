@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, Patch, UseGuards, UseInterceptors, UploadedFiles, Query, Request } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { EmergenciesService } from './emergencies.service';
 import { CreateEmergencyDto } from './dto/create-emergency.dto';
 import { UpdateEmergencyDto } from './dto/update-emergency.dto';
+import { EditEmergencyDto } from './dto/edit-emergency.dto';
 import { QueryEmergencyDto } from './dto/query-emergency.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -49,6 +50,12 @@ export class EmergenciesController {
   @Roles(ROLES.OPERADOR, ROLES.ADMIN)
   update(@Param('id') id: string, @Body() updateEmergencyDto: UpdateEmergencyDto) {
     return this.emergenciesService.update(+id, updateEmergencyDto);
+  }
+
+  @Patch(':id')
+  @Roles(ROLES.ADMIN)
+  editEmergency(@Param('id') id: string, @Body() editEmergencyDto: EditEmergencyDto, @Request() req: any) {
+    return this.emergenciesService.editEmergency(+id, editEmergencyDto, req.user);
   }
 
   @Delete(':id')
