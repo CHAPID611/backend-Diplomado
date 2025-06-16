@@ -1,4 +1,6 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateNoveltyDto } from './create-novelty.dto';
 
 export class CreateEmergencyDto {
   @IsNotEmpty()
@@ -80,4 +82,10 @@ export class CreateEmergencyDto {
   @IsNotEmpty()
   @IsNumber()
   emergencyFile: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateNoveltyDto)
+  novedades?: CreateNoveltyDto[];
 } 

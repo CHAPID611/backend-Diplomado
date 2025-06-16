@@ -25,9 +25,11 @@ export class EmergenciesController {
     @Body() createEmergencyDto: CreateEmergencyDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    const uploadedFiles = await Promise.all(
-      files.map(file => this.cloudinaryService.uploadImage(file))
-    );
+    // Verificar si hay archivos antes de procesarlos
+    const uploadedFiles = files && files.length > 0 
+      ? await Promise.all(files.map(file => this.cloudinaryService.uploadImage(file)))
+      : [];
+    
     return this.emergenciesService.create(createEmergencyDto, uploadedFiles);
   }
 

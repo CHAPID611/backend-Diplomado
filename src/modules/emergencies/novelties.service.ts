@@ -26,6 +26,15 @@ export class NoveltiesService {
     return this.noveltyRepository.find();
   }
 
+  async findTemporary() {
+    // Obtener novedades que no están asociadas a ninguna emergencia
+    return this.noveltyRepository
+      .createQueryBuilder('novelty')
+      .leftJoin('novelty.emergenciesNovelties', 'emergencyNovelty')
+      .where('emergencyNovelty.noveltyId IS NULL')
+      .getMany();
+  }
+
   async findOne(id: number) {
     const novelty = await this.noveltyRepository.findOne({ where: { noveltyId: id } });
     if (!novelty) {

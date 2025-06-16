@@ -6,7 +6,7 @@ export class EmergencyType {
   @PrimaryGeneratedColumn()
   emergencyTypeId: number;
 
-  @Column({ length: 50 })
+  @Column({ length: 100 })
   emergencyType: string;
 
   @OneToMany(() => Emergency, emergency => emergency.emergencyType)
