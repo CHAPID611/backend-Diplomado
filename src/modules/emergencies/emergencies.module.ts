@@ -11,6 +11,7 @@ import { EmergencyType } from './entities/emergency-type.entity';
 import { EmergencyFile } from './entities/emergency-file.entity';
 import { Novelty } from './entities/novelty.entity';
 import { EmergenciesNovelty } from './entities/emergencies-novelty.entity';
+import { LogActividad } from '../logs/entities/log-actividad.entity';
 import { CloudinaryService } from './cloudinary.service';
 
 @Module({
@@ -21,7 +22,8 @@ import { CloudinaryService } from './cloudinary.service';
       EmergencyType,
       EmergencyFile,
       Novelty,
-      EmergenciesNovelty
+      EmergenciesNovelty,
+      LogActividad
     ]),
   ],
   controllers: [EmergenciesController, EmergencyTypesController, NoveltiesController],

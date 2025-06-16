@@ -9,9 +9,11 @@ import { EmergencyFile } from './entities/emergency-file.entity';
 import { Novelty } from './entities/novelty.entity';
 import { EmergenciesNovelty } from './entities/emergencies-novelty.entity';
 import { UpdateEmergencyDto } from './dto/update-emergency.dto';
+import { EditEmergencyDto } from './dto/edit-emergency.dto';
 import { QueryEmergencyDto, PeriodFilter } from './dto/query-emergency.dto';
 import { addDays, addMonths, subDays, subMonths } from 'date-fns';
 import { UploadApiResponse } from 'cloudinary';
+import { LogActividad, TipoActividad } from '../logs/entities/log-actividad.entity';
 
 @Injectable()
 export class EmergenciesService {
@@ -28,6 +30,8 @@ export class EmergenciesService {
     private readonly noveltyRepository: Repository<Novelty>,
     @InjectRepository(EmergenciesNovelty)
     private readonly emergenciesNoveltyRepository: Repository<EmergenciesNovelty>,
+    @InjectRepository(LogActividad)
+    private readonly logActividadRepository: Repository<LogActividad>,
   ) {}
 
   async create(createEmergencyDto: CreateEmergencyDto, uploadedFiles: UploadApiResponse[]): Promise<Emergency> {
@@ -170,6 +174,70 @@ export class EmergenciesService {
 
     Object.assign(emergency, updateEmergencyDto);
     return this.emergencyRepository.save(emergency);
+  }
+
+  async editEmergency(id: number, editEmergencyDto: EditEmergencyDto, adminUserInfo: any) {
+    // Obtener el usuario administrador completo
+    const adminUser = await this.userRepository.findOne({ 
+      where: { id: adminUserInfo.id } 
+    });
+    
+    if (!adminUser) {
+      throw new NotFoundException('Usuario administrador no encontrado');
+    }
+
+    // Obtener la emergencia actual con todas sus relaciones
+    const currentEmergency = await this.emergencyRepository.findOne({ 
+      where: { emergencyId: id },
+      relations: ['user', 'emergencyType']
+    });
+    
+    if (!currentEmergency) {
+      throw new NotFoundException('Emergencia no encontrada');
+    }
+
+    // Crear una copia de los datos originales para el log (excluyendo relaciones)
+    const { user, emergencyType, emergencyFiles, emergenciesNovelties, ...originalData } = currentEmergency;
+
+    // Validar tipo de emergencia si se está actualizando
+    if (editEmergencyDto.emergencyType) {
+      const emergencyType = await this.emergencyTypeRepository.findOne({ 
+        where: { emergencyTypeId: editEmergencyDto.emergencyType } 
+      });
+      if (!emergencyType) {
+        throw new NotFoundException('Tipo de emergencia no encontrado');
+      }
+      currentEmergency.emergencyType = emergencyType;
+    }
+
+    // Aplicar cambios (excluyendo editReason)
+    const { editReason, ...updateData } = editEmergencyDto;
+    Object.assign(currentEmergency, updateData);
+
+    // Guardar la emergencia actualizada
+    const updatedEmergency = await this.emergencyRepository.save(currentEmergency);
+
+    // Crear registro de log de la edición
+    const logEntry = this.logActividadRepository.create({
+      tipo: TipoActividad.ACTUALIZACION,
+      descripcion: `Emergencia editada por administrador${editReason ? `: ${editReason}` : ''}`,
+      entidad: 'Emergency',
+      entidadId: id,
+      usuario: adminUser,
+      datosAdicionales: {
+        datosOriginales: originalData,
+        cambiosRealizados: updateData,
+        motivoEdicion: editReason || 'Sin motivo especificado'
+      }
+    });
+
+    await this.logActividadRepository.save(logEntry);
+
+    // Retornar la emergencia actualizada con relaciones
+    return this.emergencyRepository.findOne({
+      where: { emergencyId: id },
+      relations: ['user', 'emergencyType', 'emergencyFiles', 'emergenciesNovelties', 'emergenciesNovelties.novelty']
+    });
   }
 
   remove(id: number) {
