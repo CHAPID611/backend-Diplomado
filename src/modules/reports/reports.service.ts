@@ -5,6 +5,7 @@ import { Emergency } from '../emergencies/entities/emergency.entity';
 import { EmergencyType } from '../emergencies/entities/emergency-type.entity';
 import { User } from '../auth/entities/user.entity';
 import { ReportFiltersDto, ReportPeriod } from './dto/report-filters.dto';
+import { StatisticsService, EmergencyStatistics } from './statistics.service';
 import { subDays, subMonths, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import * as PDFDocument from 'pdfkit';
@@ -19,6 +20,7 @@ export class ReportsService {
     private readonly emergencyTypeRepository: Repository<EmergencyType>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly statisticsService: StatisticsService,
   ) {}
 
   private getDateRange(period: ReportPeriod, startDate?: string, endDate?: string) {
@@ -95,22 +97,12 @@ export class ReportsService {
       .orderBy('emergency.emergencyDate', 'DESC')
       .getMany();
 
-    // Debug: Log para verificar datos
-    console.log('=== DEBUG REPORTE ===');
-    console.log('Período:', { start, end });
-    console.log('Filtros:', { emergencyTypeId, userId });
-    console.log('Total emergencias encontradas:', emergencies.length);
-    if (emergencies.length > 0) {
-      console.log('Primera emergencia:', {
-        id: emergencies[0].emergencyId,
-        fecha: emergencies[0].emergencyDate,
-        tipo: emergencies[0].emergencyType?.emergencyType,
-        informante: emergencies[0].informant
-      });
-    }
-    console.log('==================');
 
-    // Estadísticas consolidadas
+
+    // Obtener estadísticas avanzadas usando el StatisticsService
+    const advancedStats = await this.statisticsService.generateStatistics(filters, 15);
+
+    // Estadísticas consolidadas (mantener compatibilidad)
     const totalEmergencies = emergencies.length;
     const emergenciesByType = await this.getEmergenciesByType(emergencies);
     const emergenciesByUser = await this.getEmergenciesByUser(emergencies);
@@ -123,6 +115,7 @@ export class ReportsService {
       emergenciesByType,
       emergenciesByUser,
       averageResponseTime,
+      advancedStats, // Nuevas estadísticas avanzadas
       generatedAt: new Date()
     };
   }
@@ -578,7 +571,7 @@ export class ReportsService {
 
         // Resumen ejecutivo con caja de color
         const resumenY = doc.y;
-        doc.rect(50, resumenY, 500, 80)
+        doc.rect(50, resumenY, 500, 120)
            .fillAndStroke('#F8F8FF', '#F8F8FF'); // Fondo gris claro con borde del mismo color
         
         doc.fontSize(16).font('Helvetica-Bold')
@@ -590,7 +583,20 @@ export class ReportsService {
            .text(`Total de emergencias atendidas: ${data.totalEmergencies}`, 60, resumenY + 35)
            .text(`Tiempo promedio de respuesta: ${data.averageResponseTime}`, 60, resumenY + 55);
         
-        doc.y = resumenY + 90;
+        // Agregar métricas avanzadas si están disponibles
+        if (data.advancedStats && data.advancedStats.mostCommonEmergencyType) {
+          doc.text(`Tipo más frecuente: ${data.advancedStats.mostCommonEmergencyType.type} (${data.advancedStats.mostCommonEmergencyType.count} casos)`, 60, resumenY + 75);
+          
+          if (data.advancedStats.timeAnalysis) {
+            const cumplimiento = data.advancedStats.timeAnalysis.emergenciesWithinTargetPercentage;
+            const cumplimientoColor = cumplimiento >= 80 ? '#28a745' : cumplimiento >= 60 ? '#ffc107' : '#dc3545';
+            doc.fillColor(cumplimientoColor)
+               .text(`Cumplimiento del objetivo (${data.advancedStats.timeAnalysis.targetTime} min): ${cumplimiento}%`, 60, resumenY + 95);
+            doc.fillColor('#000000'); // Resetear color
+          }
+        }
+        
+        doc.y = resumenY + 130;
 
         // ================================
         // 2. RESUMEN ESTADÍSTICO
@@ -651,6 +657,112 @@ export class ReportsService {
           doc.moveDown(0.7);
         });
 
+        // ================================
+        // ANÁLISIS DE TIEMPOS DE RESPUESTA
+        // ================================
+        
+        checkPageSpace(200);
+        doc.moveDown(1);
+        
+        doc.fontSize(16).font('Helvetica-Bold')
+           .fillColor('#DC143C')
+           .text('ANÁLISIS DE TIEMPOS DE RESPUESTA');
+        
+        // Línea decorativa
+        doc.strokeColor('#FFD700')
+           .lineWidth(1)
+           .moveTo(50, doc.y + 5)
+           .lineTo(550, doc.y + 5)
+           .stroke();
+        doc.moveDown(1);
+
+        if (data.advancedStats && data.advancedStats.timeAnalysis) {
+          const timeAnalysis = data.advancedStats.timeAnalysis;
+          
+          // Caja de métricas principales
+          const metricsY = doc.y;
+          doc.rect(50, metricsY, 500, 120)
+             .fillAndStroke('#F0F8FF', '#E0E0E0');
+          
+          doc.fontSize(12).font('Helvetica-Bold')
+             .fillColor('#DC143C')
+             .text('MÉTRICAS DE PERFORMANCE', 60, metricsY + 10);
+          
+          doc.fontSize(10).font('Helvetica')
+             .fillColor('#000000')
+             .text(`Tiempo Objetivo: ${timeAnalysis.targetTime} minutos`, 60, metricsY + 35)
+             .text(`Tiempo Promedio: ${timeAnalysis.averageTime} minutos`, 60, metricsY + 50)
+             .text(`Tiempo Mínimo: ${timeAnalysis.minTime} minutos`, 60, metricsY + 65)
+             .text(`Tiempo Máximo: ${timeAnalysis.maxTime} minutos`, 60, metricsY + 80);
+          
+          // Métricas de cumplimiento
+          doc.text(`Emergencias dentro del objetivo: ${timeAnalysis.emergenciesWithinTarget} (${timeAnalysis.emergenciesWithinTargetPercentage}%)`, 300, metricsY + 35)
+             .text(`Emergencias fuera del objetivo: ${timeAnalysis.emergenciesOverTarget} (${timeAnalysis.emergenciesOverTargetPercentage}%)`, 300, metricsY + 50);
+          
+          // Indicador visual de cumplimiento
+          const targetPercentage = timeAnalysis.emergenciesWithinTargetPercentage;
+          const indicatorColor = targetPercentage >= 80 ? '#28a745' : targetPercentage >= 60 ? '#ffc107' : '#dc3545';
+          
+          doc.rect(300, metricsY + 70, 200, 15)
+             .fillAndStroke('#e9ecef', '#dee2e6');
+          
+          doc.rect(300, metricsY + 70, (targetPercentage / 100) * 200, 15)
+             .fillAndStroke(indicatorColor, indicatorColor);
+          
+          doc.fontSize(8).font('Helvetica')
+             .fillColor('#000000')
+             .text(`${targetPercentage}% de cumplimiento`, 300, metricsY + 95);
+          
+          doc.y = metricsY + 130;
+        }
+
+        // ================================
+        // TENDENCIAS MENSUALES
+        // ================================
+        
+        checkPageSpace(250);
+        doc.moveDown(1);
+        
+        doc.fontSize(16).font('Helvetica-Bold')
+           .fillColor('#DC143C')
+           .text('TENDENCIAS MENSUALES');
+        
+        // Línea decorativa
+        doc.strokeColor('#FFD700')
+           .lineWidth(1)
+           .moveTo(50, doc.y + 5)
+           .lineTo(550, doc.y + 5)
+           .stroke();
+        doc.moveDown(1);
+
+        if (data.advancedStats && data.advancedStats.monthlyTrends) {
+          const trends = data.advancedStats.monthlyTrends;
+          const maxEmergencies = Math.max(...trends.map(t => t.totalEmergencies), 1);
+          
+          doc.fontSize(11).font('Helvetica')
+             .fillColor('#000000');
+          
+          trends.forEach((trend, index) => {
+            checkPageSpace(25);
+            const barWidth = (trend.totalEmergencies / maxEmergencies) * 250;
+            const currentY = doc.y;
+            
+            // Mes y año
+            const monthYear = `${trend.month} ${trend.year}`;
+            doc.text(monthYear, 50, currentY);
+            
+            // Barra de progreso
+            doc.rect(180, currentY, Math.max(barWidth, 5), 12)
+               .fillAndStroke('#17a2b8', '#17a2b8');
+            
+            // Valores
+            doc.text(`${trend.totalEmergencies} emergencias`, 440, currentY);
+            doc.text(`${trend.averageResponseTime}`, 440, currentY + 12);
+            
+            doc.moveDown(1);
+          });
+        }
+
         // Nueva página para el detalle
         addNewPage();
 
@@ -662,8 +774,7 @@ export class ReportsService {
            .text('DETALLE DE EMERGENCIAS', { align: 'center' });
         doc.moveDown(1);
 
-        // Debug: Verificar si hay emergencias para procesar
-        console.log('Procesando emergencias en PDF:', data.emergencies.length);
+
         
         if (data.emergencies.length === 0) {
           doc.fontSize(12).font('Helvetica')
@@ -766,72 +877,5 @@ export class ReportsService {
     });
   }
 
-  async debugReportData(filters: ReportFiltersDto) {
-    const { period = ReportPeriod.LAST_MONTH, startDate, endDate, emergencyTypeId, userId } = filters;
-    const { start, end } = this.getDateRange(period, startDate, endDate);
 
-    console.log('🔍 DEBUG REPORTS: Filtros recibidos:', filters);
-    console.log('🔍 DEBUG REPORTS: Rango de fechas calculado:', { start, end });
-
-    // 1. Consultar TODAS las emergencias sin filtros
-    const allEmergencies = await this.emergencyRepository
-      .createQueryBuilder('emergency')
-      .leftJoinAndSelect('emergency.user', 'user')
-      .leftJoinAndSelect('emergency.emergencyType', 'emergencyType')
-      .orderBy('emergency.emergencyDate', 'DESC')
-      .getMany();
-
-    console.log('🔍 DEBUG REPORTS: Total emergencias en BD:', allEmergencies.length);
-    
-    if (allEmergencies.length > 0) {
-      console.log('🔍 DEBUG REPORTS: Fechas de emergencias en BD:');
-      allEmergencies.forEach((e, i) => {
-        if (i < 10) { // Solo las primeras 10
-          console.log(`  - ${e.emergencyId}: ${e.emergencyDate} (${typeof e.emergencyDate})`);
-        }
-      });
-    }
-
-    // 2. Consultar con filtros de fecha
-    const queryBuilder = this.emergencyRepository
-      .createQueryBuilder('emergency')
-      .leftJoinAndSelect('emergency.user', 'user')
-      .leftJoinAndSelect('emergency.emergencyType', 'emergencyType')
-      .where('emergency.emergencyDate BETWEEN :start AND :end', { start, end });
-
-    if (emergencyTypeId) {
-      queryBuilder.andWhere('emergency.emergencyType = :emergencyTypeId', { emergencyTypeId });
-    }
-
-    if (userId) {
-      queryBuilder.andWhere('emergency.user = :userId', { userId });
-    }
-
-    const filteredEmergencies = await queryBuilder
-      .orderBy('emergency.emergencyDate', 'DESC')
-      .getMany();
-
-    console.log('🔍 DEBUG REPORTS: Emergencias con filtro de fecha:', filteredEmergencies.length);
-
-    // 3. Obtener la consulta SQL raw
-    const rawQuery = queryBuilder.getQueryAndParameters();
-    console.log('🔍 DEBUG REPORTS: SQL Query:', rawQuery[0]);
-    console.log('🔍 DEBUG REPORTS: SQL Params:', rawQuery[1]);
-
-    return {
-      filters,
-      dateRange: { start, end },
-      totalEmergenciesInDB: allEmergencies.length,
-      filteredEmergencies: filteredEmergencies.length,
-      sampleEmergencies: allEmergencies.slice(0, 5).map(e => ({
-        id: e.emergencyId,
-        date: e.emergencyDate,
-        dateType: typeof e.emergencyDate,
-        type: e.emergencyType?.emergencyType,
-        user: e.user?.email
-      })),
-      sqlQuery: rawQuery[0],
-      sqlParams: rawQuery[1]
-    };
-  }
 } 
