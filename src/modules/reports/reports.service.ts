@@ -56,6 +56,13 @@ export class ReportsService {
         throw new BadRequestException('Periodo no válido');
     }
 
+    // Asegurar que las fechas incluyan todo el día
+    // Establecer start al inicio del día (00:00:00)
+    start.setHours(0, 0, 0, 0);
+    
+    // Establecer end al final del día (23:59:59.999)
+    end.setHours(23, 59, 59, 999);
+
     return { start, end };
   }
 
@@ -490,9 +497,7 @@ export class ReportsService {
     }
   }
 
-
-
-    async generatePDFReport(filters: ReportFiltersDto): Promise<Buffer> {
+  async generatePDFReport(filters: ReportFiltersDto): Promise<Buffer> {
     const data = await this.consolidateData(filters);
     
     return new Promise(async (resolve, reject) => {
@@ -759,5 +764,74 @@ export class ReportsService {
         reject(error);
       }
     });
+  }
+
+  async debugReportData(filters: ReportFiltersDto) {
+    const { period = ReportPeriod.LAST_MONTH, startDate, endDate, emergencyTypeId, userId } = filters;
+    const { start, end } = this.getDateRange(period, startDate, endDate);
+
+    console.log('🔍 DEBUG REPORTS: Filtros recibidos:', filters);
+    console.log('🔍 DEBUG REPORTS: Rango de fechas calculado:', { start, end });
+
+    // 1. Consultar TODAS las emergencias sin filtros
+    const allEmergencies = await this.emergencyRepository
+      .createQueryBuilder('emergency')
+      .leftJoinAndSelect('emergency.user', 'user')
+      .leftJoinAndSelect('emergency.emergencyType', 'emergencyType')
+      .orderBy('emergency.emergencyDate', 'DESC')
+      .getMany();
+
+    console.log('🔍 DEBUG REPORTS: Total emergencias en BD:', allEmergencies.length);
+    
+    if (allEmergencies.length > 0) {
+      console.log('🔍 DEBUG REPORTS: Fechas de emergencias en BD:');
+      allEmergencies.forEach((e, i) => {
+        if (i < 10) { // Solo las primeras 10
+          console.log(`  - ${e.emergencyId}: ${e.emergencyDate} (${typeof e.emergencyDate})`);
+        }
+      });
+    }
+
+    // 2. Consultar con filtros de fecha
+    const queryBuilder = this.emergencyRepository
+      .createQueryBuilder('emergency')
+      .leftJoinAndSelect('emergency.user', 'user')
+      .leftJoinAndSelect('emergency.emergencyType', 'emergencyType')
+      .where('emergency.emergencyDate BETWEEN :start AND :end', { start, end });
+
+    if (emergencyTypeId) {
+      queryBuilder.andWhere('emergency.emergencyType = :emergencyTypeId', { emergencyTypeId });
+    }
+
+    if (userId) {
+      queryBuilder.andWhere('emergency.user = :userId', { userId });
+    }
+
+    const filteredEmergencies = await queryBuilder
+      .orderBy('emergency.emergencyDate', 'DESC')
+      .getMany();
+
+    console.log('🔍 DEBUG REPORTS: Emergencias con filtro de fecha:', filteredEmergencies.length);
+
+    // 3. Obtener la consulta SQL raw
+    const rawQuery = queryBuilder.getQueryAndParameters();
+    console.log('🔍 DEBUG REPORTS: SQL Query:', rawQuery[0]);
+    console.log('🔍 DEBUG REPORTS: SQL Params:', rawQuery[1]);
+
+    return {
+      filters,
+      dateRange: { start, end },
+      totalEmergenciesInDB: allEmergencies.length,
+      filteredEmergencies: filteredEmergencies.length,
+      sampleEmergencies: allEmergencies.slice(0, 5).map(e => ({
+        id: e.emergencyId,
+        date: e.emergencyDate,
+        dateType: typeof e.emergencyDate,
+        type: e.emergencyType?.emergencyType,
+        user: e.user?.email
+      })),
+      sqlQuery: rawQuery[0],
+      sqlParams: rawQuery[1]
+    };
   }
 } 

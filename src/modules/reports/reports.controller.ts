@@ -69,4 +69,19 @@ export class ReportsController {
       throw new BadRequestException('Error al generar preview: ' + error.message);
     }
   }
+
+  @Get('debug')
+  @Roles(ROLES.ADMIN)
+  async debugReports(@Query() filters: ReportFiltersDto) {
+    try {
+      const data = await this.reportsService.debugReportData(filters);
+      return {
+        success: true,
+        debug: data
+      };
+    } catch (error) {
+      console.error('Error en debug:', error);
+      throw new BadRequestException('Error en debug: ' + error.message);
+    }
+  }
 } 
