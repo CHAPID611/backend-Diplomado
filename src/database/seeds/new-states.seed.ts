@@ -6,7 +6,6 @@ export async function seedStates(dataSource: DataSource): Promise<void> {
 
   const states = [
     { state: 'activo' },
-    { state: 'inactivo' },
     { state: 'en licencia' }
   ];
 

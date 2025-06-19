@@ -10,7 +10,7 @@ export class Personal {
   @PrimaryGeneratedColumn()
   personalId: number;
 
-  @OneToOne(() => User)
+  @ManyToOne(() => User)
   @JoinColumn({ name: 'userId' })
   user: User;
 
@@ -61,6 +61,9 @@ export class Personal {
 
   @Column({ length: 15, nullable: false })
   phoneNumber: string;
+
+  @Column({ length: 100, nullable: false })
+  email: string;
 
   @OneToMany(() => PeopleCompetencias, peopleCompetencias => peopleCompetencias.personal)
   peopleCompetencias: PeopleCompetencias[];

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsDateString, IsArray, IsObject, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsDateString, IsArray, IsObject, ValidateNested, IsEmail } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class ContactoEmergenciaDto {
@@ -73,6 +73,10 @@ export class UpdatePersonalDto {
   @IsOptional()
   @IsString()
   phoneNumber?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @IsOptional()
   @IsArray()
