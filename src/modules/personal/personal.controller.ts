@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
 import { PersonalService } from './personal.service';
 import { CreatePersonalDto } from './dto/create-personal.dto';
 import { UpdatePersonalDto } from './dto/update-personal.dto';
@@ -34,5 +34,11 @@ export class PersonalController {
   @Roles(ROLES.ADMIN)
   update(@Param('id') id: string, @Body() updatePersonalDto: UpdatePersonalDto) {
     return this.personalService.update(+id, updatePersonalDto);
+  }
+
+  @Delete(':id')
+  @Roles(ROLES.ADMIN)
+  remove(@Param('id') id: string) {
+    return this.personalService.remove(+id);
   }
 } 
