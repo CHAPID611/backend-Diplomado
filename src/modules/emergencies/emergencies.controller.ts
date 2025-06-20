@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, Patch, UseGuards, UseInterceptors, UploadedFiles, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, Patch, UseGuards, UseInterceptors, UploadedFiles, Query, Request, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { EmergenciesService } from './emergencies.service';
 import { CreateEmergencyDto } from './dto/create-emergency.dto';
@@ -21,17 +21,30 @@ export class EmergenciesController {
 
   @Post()
   @Roles(ROLES.OPERADOR, ROLES.ADMIN)
-  @UseInterceptors(FilesInterceptor('file', 10))
+  @UseInterceptors(FilesInterceptor('file'))
   async create(
-    @Body() createEmergencyDto: CreateEmergencyDto,
-    @UploadedFiles() files: Express.Multer.File[],
+    @Body() createEmergencyDto: CreateEmergencyDto | { data: string },
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png)$/ }),
+        ],
+        fileIsRequired: false,
+      }),
+    ) files?: Express.Multer.File[],
   ) {
-    // Verificar si hay archivos antes de procesarlos
+    // Si los datos vienen como string (FormData), parsearlos
+    const emergencyData = typeof createEmergencyDto === 'object' && 'data' in createEmergencyDto
+      ? JSON.parse(createEmergencyDto.data)
+      : createEmergencyDto;
+
+    // Procesar archivos con Cloudinary si existen
     const uploadedFiles = files && files.length > 0 
       ? await Promise.all(files.map(file => this.cloudinaryService.uploadImage(file)))
       : [];
-    
-    return this.emergenciesService.create(createEmergencyDto, uploadedFiles);
+
+    return this.emergenciesService.create(emergencyData, uploadedFiles);
   }
 
   @Get()

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThanOrEqual } from 'typeorm';
+import { Repository, Between, LessThanOrEqual, DeepPartial } from 'typeorm';
 import { Emergency } from './entities/emergency.entity';
 import { CreateEmergencyDto } from './dto/create-emergency.dto';
 import { User } from '../auth/entities/user.entity';
@@ -14,6 +14,8 @@ import { QueryEmergencyDto, PeriodFilter } from './dto/query-emergency.dto';
 import { addDays, addMonths, subDays, subMonths } from 'date-fns';
 import { UploadApiResponse } from 'cloudinary';
 import { LogActividad, TipoActividad } from '../logs/entities/log-actividad.entity';
+import { Vehicle } from '../vehicles/entities/vehicle.entity';
+import { VehicleStatus } from '../vehicles/enums/vehicle-status.enum';
 
 @Injectable()
 export class EmergenciesService {
@@ -32,6 +34,8 @@ export class EmergenciesService {
     private readonly emergenciesNoveltyRepository: Repository<EmergenciesNovelty>,
     @InjectRepository(LogActividad)
     private readonly logActividadRepository: Repository<LogActividad>,
+    @InjectRepository(Vehicle)
+    private readonly vehicleRepository: Repository<Vehicle>,
   ) {}
 
   async create(createEmergencyDto: CreateEmergencyDto, uploadedFiles: UploadApiResponse[]): Promise<Emergency> {
@@ -41,23 +45,49 @@ export class EmergenciesService {
     const emergencyType = await this.emergencyTypeRepository.findOne({ where: { emergencyTypeId: createEmergencyDto.emergencyType } });
     if (!emergencyType) throw new NotFoundException('Tipo de emergencia no encontrado');
 
-    // Extraer novedades del DTO
-    const { novedades, ...emergencyData } = createEmergencyDto;
+    // Extraer novedades y vehicleIds del DTO
+    const { novedades, vehicleIds: rawVehicleIds, ...emergencyData } = createEmergencyDto;
 
-    const emergency = this.emergencyRepository.create({
+    // Asegurar que vehicleIds sea un array
+    const vehicleIds = Array.isArray(rawVehicleIds) ? rawVehicleIds : [rawVehicleIds].filter(id => id != null);
+
+    // Buscar los vehículos
+    const vehicles = await Promise.all(
+      vehicleIds.map(async (id) => {
+        const vehicle = await this.vehicleRepository.findOne({ where: { vehicleId: id } });
+        if (!vehicle) {
+          throw new NotFoundException(`Vehículo con ID ${id} no encontrado`);
+        }
+        return vehicle;
+      })
+    );
+
+    // Guardar la emergencia con los vehículos
+    const savedEmergency = await this.emergencyRepository.save({
       ...emergencyData,
       user,
       emergencyType,
-    });
+      vehicles
+    } as DeepPartial<Emergency>);
 
-    const savedEmergency = await this.emergencyRepository.save(emergency);
+    if (!savedEmergency) {
+      throw new NotFoundException('Error al crear la emergencia');
+    }
+
+    // Actualizar el estado de los vehículos a 'en_emergencia'
+    await Promise.all(
+      vehicles.map(async (vehicle) => {
+        vehicle.status = VehicleStatus.IN_EMERGENCY;
+        await this.vehicleRepository.save(vehicle);
+      })
+    );
 
     // Guardar los archivos solo si se proporcionaron
     if (uploadedFiles && uploadedFiles.length > 0) {
       for (const file of uploadedFiles) {
         const emergencyFile = this.emergencyFileRepository.create({
           file: file.secure_url,
-          emergency: savedEmergency
+          emergencyId: savedEmergency.emergencyId
         });
         await this.emergencyFileRepository.save(emergencyFile);
       }
@@ -79,16 +109,7 @@ export class EmergenciesService {
       }
     }
 
-    const foundEmergency = await this.emergencyRepository.findOne({
-      where: { emergencyId: savedEmergency.emergencyId },
-      relations: ['user', 'emergencyType', 'emergencyFiles', 'emergenciesNovelties', 'emergenciesNovelties.novelty']
-    });
-
-    if (!foundEmergency) {
-      throw new NotFoundException('Error al recuperar la emergencia creada');
-    }
-
-    return foundEmergency;
+    return savedEmergency;
   }
 
   private getDateRange(period: PeriodFilter, startDate?: string, endDate?: string) {

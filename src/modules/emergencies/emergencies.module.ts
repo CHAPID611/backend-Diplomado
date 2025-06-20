@@ -13,6 +13,8 @@ import { Novelty } from './entities/novelty.entity';
 import { EmergenciesNovelty } from './entities/emergencies-novelty.entity';
 import { LogActividad } from '../logs/entities/log-actividad.entity';
 import { CloudinaryService } from './cloudinary.service';
+import { VehiclesModule } from '../vehicles/vehicles.module';
+import { Vehicle } from '../vehicles/entities/vehicle.entity';
 
 @Module({
   imports: [
@@ -23,10 +25,13 @@ import { CloudinaryService } from './cloudinary.service';
       EmergencyFile,
       Novelty,
       EmergenciesNovelty,
-      LogActividad
+      LogActividad,
+      Vehicle
     ]),
+    VehiclesModule
   ],
   controllers: [EmergenciesController, EmergencyTypesController, NoveltiesController],
   providers: [EmergenciesService, NoveltiesService, CloudinaryService],
+  exports: [EmergenciesService]
 })
 export class EmergenciesModule {} 

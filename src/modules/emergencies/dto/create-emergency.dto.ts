@@ -12,8 +12,9 @@ export class CreateEmergencyDto {
   informant: string;
 
   @IsNotEmpty()
-  @IsString()
-  vehicle: string;
+  @IsArray()
+  @IsNumber({}, { each: true })
+  vehicleIds: number[];
 
   @IsNotEmpty()
   @IsString()
