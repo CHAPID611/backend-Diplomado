@@ -4,6 +4,7 @@ import { Repository, Between } from 'typeorm';
 import { Emergency } from '../emergencies/entities/emergency.entity';
 import { EmergencyType } from '../emergencies/entities/emergency-type.entity';
 import { ReportFiltersDto, ReportPeriod } from './dto/report-filters.dto';
+import { SystemConfigService } from './system-config.service';
 import { subDays, subMonths, format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -51,6 +52,7 @@ export class StatisticsService {
     private readonly emergencyRepository: Repository<Emergency>,
     @InjectRepository(EmergencyType)
     private readonly emergencyTypeRepository: Repository<EmergencyType>,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   private getDateRange(period: ReportPeriod, startDate?: string, endDate?: string) {
@@ -118,10 +120,12 @@ export class StatisticsService {
     return `${hours}h ${remainingMinutes}m`;
   }
 
-  async generateStatistics(filters: ReportFiltersDto, targetTime?: number): Promise<EmergencyStatistics> {
+  async generateStatistics(filters: ReportFiltersDto): Promise<EmergencyStatistics> {
     const { period = ReportPeriod.LAST_MONTH, startDate, endDate, emergencyTypeId, userId } = filters;
     const { start, end } = this.getDateRange(period, startDate, endDate);
-    const objectiveTime = targetTime || this.DEFAULT_TARGET_TIME;
+    
+    // Obtener el tiempo objetivo de la configuración del sistema
+    const objectiveTime = await this.systemConfigService.getTargetTime();
 
     // Consulta principal
     const queryBuilder = this.emergencyRepository
