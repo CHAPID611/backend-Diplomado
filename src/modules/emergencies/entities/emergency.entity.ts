@@ -1,8 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { User } from '../../../modules/auth/entities/user.entity';
 import { EmergencyType } from './emergency-type.entity';
 import { EmergencyFile } from './emergency-file.entity';
 import { EmergenciesNovelty } from './emergencies-novelty.entity';
+import { Vehicle } from '../../vehicles/entities/vehicle.entity';
 
 @Entity('emergencies')
 export class Emergency {
@@ -23,6 +24,20 @@ export class Emergency {
   @Column()
   emergencyTypeId: number;
 
+  @ManyToMany(() => Vehicle)
+  @JoinTable({
+    name: 'emergency_vehicles',
+    joinColumn: {
+      name: 'emergencyId',
+      referencedColumnName: 'emergencyId'
+    },
+    inverseJoinColumn: {
+      name: 'vehicleId',
+      referencedColumnName: 'vehicleId'
+    }
+  })
+  vehicles: Vehicle[];
+
   @OneToMany(() => EmergencyFile, emergencyFile => emergencyFile.emergency)
   emergencyFiles: EmergencyFile[];
 
@@ -31,9 +46,6 @@ export class Emergency {
 
   @Column({ length: 50 })
   informant: string;
-
-  @Column({ length: 50 })
-  vehicle: string;
 
   @Column({ length: 50 })
   ubication: string;

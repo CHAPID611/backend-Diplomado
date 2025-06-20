@@ -187,7 +187,7 @@ export class ReportsService {
       events.push({
         time: new Date(emergency.departureTime),
         title: 'SALIDA DE UNIDADES',
-        description: `${time} - Personal de guardia se dirige al lugar del incidente. ${emergency.vehicle} despachado con ${emergency.guardPersonnel}. ${emergency.departureTimeDescription || ''}`
+        description: `${time} - Personal de guardia se dirige al lugar del incidente. ${emergency.vehicles} despachado con ${emergency.guardPersonnel}. ${emergency.departureTimeDescription || ''}`
       });
     }
 
@@ -802,7 +802,7 @@ export class ReportsService {
           doc.text(`Informante: ${emergency.informant}`);
           doc.text(`Ubicación: ${emergency.ubication}`);
           doc.text(`Turno: ${emergency.turn}`);
-          doc.text(`Vehículo: ${emergency.vehicle}`);
+          doc.text(`Vehículo: ${emergency.vehicles.map(v => v.name).join(', ')}`);
           doc.text(`Personal de Guardia: ${emergency.guardPersonnel}`);
           doc.text(`Unidades de Respuesta: ${emergency.unitsResponse}`);
           doc.text(`Operador: ${emergency.user.email}`);
