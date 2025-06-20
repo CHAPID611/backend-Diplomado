@@ -15,6 +15,9 @@ import { LogActividad } from '../logs/entities/log-actividad.entity';
 import { CloudinaryService } from './cloudinary.service';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { Vehicle } from '../vehicles/entities/vehicle.entity';
+import { Personal } from '../personal/entities/personal.entity';
+import { EmploymentData } from '../personal/entities/employment-data.entity';
+import { Ranges } from '../personal/entities/ranges.entity';
 
 @Module({
   imports: [
@@ -26,7 +29,10 @@ import { Vehicle } from '../vehicles/entities/vehicle.entity';
       Novelty,
       EmergenciesNovelty,
       LogActividad,
-      Vehicle
+      Vehicle,
+      Personal,
+      EmploymentData,
+      Ranges
     ]),
     VehiclesModule
   ],

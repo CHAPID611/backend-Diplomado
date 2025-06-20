@@ -76,4 +76,43 @@ export class EmergenciesController {
   remove(@Param('id') id: string) {
     return this.emergenciesService.remove(+id);
   }
+
+  // Endpoints para gestión de personal
+
+  @Get('personal/disponible')
+  @Roles(ROLES.OPERADOR, ROLES.ADMIN)
+  async getAvailablePersonnel() {
+    const personnel = await this.emergenciesService.getAvailablePersonnel();
+    return {
+      success: true,
+      data: this.emergenciesService.formatPersonnelForFrontend(personnel),
+      total: personnel.length
+    };
+  }
+
+  @Get('personal/activo')
+  @Roles(ROLES.OPERADOR, ROLES.ADMIN)
+  async getActiveEmergencies() {
+    const emergencies = await this.emergenciesService.getActiveEmergencies();
+    return {
+      success: true,
+      data: emergencies,
+      total: emergencies.length
+    };
+  }
+
+  @Patch(':id/completar')
+  @Roles(ROLES.OPERADOR, ROLES.ADMIN)
+  async completeEmergency(
+    @Param('id') id: string,
+    @Body() completeData: { returnStationTime: string; description?: string }
+  ) {
+    const returnTime = new Date(completeData.returnStationTime);
+    const emergency = await this.emergenciesService.completeEmergency(+id, returnTime, completeData.description);
+    return {
+      success: true,
+      message: 'Emergencia completada exitosamente',
+      data: emergency
+    };
+  }
 } 

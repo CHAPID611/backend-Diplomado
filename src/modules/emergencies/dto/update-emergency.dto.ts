@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsDateString, IsArray } from 'class-validator';
 
 export class UpdateEmergencyDto {
   @IsOptional()
@@ -64,6 +64,11 @@ export class UpdateEmergencyDto {
   @IsOptional()
   @IsString()
   unitsResponse?: string;
+
+  @IsArray()
+  @IsOptional()
+  @IsNumber({}, { each: true })
+  personnelIds?: number[];
 
   @IsOptional()
   @IsString()

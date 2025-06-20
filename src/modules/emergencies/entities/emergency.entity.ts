@@ -4,6 +4,7 @@ import { EmergencyType } from './emergency-type.entity';
 import { EmergencyFile } from './emergency-file.entity';
 import { EmergenciesNovelty } from './emergencies-novelty.entity';
 import { Vehicle } from '../../vehicles/entities/vehicle.entity';
+import { Personal } from '../../personal/entities/personal.entity';
 
 @Entity('emergencies')
 export class Emergency {
@@ -37,6 +38,20 @@ export class Emergency {
     }
   })
   vehicles: Vehicle[];
+
+  @ManyToMany(() => Personal)
+  @JoinTable({
+    name: 'emergency_personnel',
+    joinColumn: {
+      name: 'emergencyId',
+      referencedColumnName: 'emergencyId'
+    },
+    inverseJoinColumn: {
+      name: 'personalId',
+      referencedColumnName: 'personalId'
+    }
+  })
+  personnel: Personal[];
 
   @OneToMany(() => EmergencyFile, emergencyFile => emergencyFile.emergency)
   emergencyFiles: EmergencyFile[];
@@ -86,7 +101,7 @@ export class Emergency {
   @Column({ length: 50 })
   unitsResponse: string;
 
-  @Column({ length: 50 })
+  @Column({ length: 255 })
   guardPersonnel: string;
 
   @OneToMany(() => EmergenciesNovelty, en => en.emergency)
