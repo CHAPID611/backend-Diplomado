@@ -68,9 +68,14 @@ export class CreateEmergencyDto {
   @IsString()
   unitsResponse: string;
 
-  @IsNotEmpty()
+  @IsArray()
+  @IsOptional()
+  @IsNumber({}, { each: true })
+  personnelIds?: number[];
+
   @IsString()
-  guardPersonnel: string;
+  @IsOptional()
+  guardPersonnel?: string;
 
   @IsNotEmpty()
   @IsNumber()
