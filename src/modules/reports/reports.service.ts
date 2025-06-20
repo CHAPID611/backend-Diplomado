@@ -100,7 +100,7 @@ export class ReportsService {
 
 
     // Obtener estadísticas avanzadas usando el StatisticsService
-    const advancedStats = await this.statisticsService.generateStatistics(filters, 15);
+    const advancedStats = await this.statisticsService.generateStatistics(filters);
 
     // Estadísticas consolidadas (mantener compatibilidad)
     const totalEmergencies = emergencies.length;

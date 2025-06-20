@@ -15,7 +15,7 @@ export class StatisticsController {
   @Get()
   @Roles('admin', 'operator')
   async getStatistics(@Query() filters: StatisticsFiltersDto): Promise<EmergencyStatistics> {
-    return this.statisticsService.generateStatistics(filters, filters.targetTime);
+    return this.statisticsService.generateStatistics(filters);
   }
 
   @Get('summary')
@@ -27,7 +27,7 @@ export class StatisticsController {
     emergenciesWithinTarget: number;
     emergenciesWithinTargetPercentage: number;
   }> {
-    const stats = await this.statisticsService.generateStatistics(filters, filters.targetTime);
+    const stats = await this.statisticsService.generateStatistics(filters);
     
     return {
       totalEmergencies: stats.totalEmergencies,
@@ -41,7 +41,7 @@ export class StatisticsController {
   @Get('by-type')
   @Roles('admin', 'operator')
   async getStatisticsByType(@Query() filters: StatisticsFiltersDto) {
-    const stats = await this.statisticsService.generateStatistics(filters, filters.targetTime);
+    const stats = await this.statisticsService.generateStatistics(filters);
     return {
       emergenciesByType: stats.emergenciesByType,
       mostCommonType: stats.mostCommonEmergencyType
@@ -51,7 +51,7 @@ export class StatisticsController {
   @Get('monthly-trends')
   @Roles('admin', 'operator')
   async getMonthlyTrends(@Query() filters: StatisticsFiltersDto) {
-    const stats = await this.statisticsService.generateStatistics(filters, filters.targetTime);
+    const stats = await this.statisticsService.generateStatistics(filters);
     return {
       monthlyTrends: stats.monthlyTrends
     };
@@ -60,7 +60,7 @@ export class StatisticsController {
   @Get('time-analysis')
   @Roles('admin', 'operator')
   async getTimeAnalysis(@Query() filters: StatisticsFiltersDto) {
-    const stats = await this.statisticsService.generateStatistics(filters, filters.targetTime);
+    const stats = await this.statisticsService.generateStatistics(filters);
     return {
       timeAnalysis: stats.timeAnalysis
     };
