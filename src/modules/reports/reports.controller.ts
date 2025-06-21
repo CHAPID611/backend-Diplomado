@@ -14,9 +14,43 @@ import { es } from 'date-fns/locale';
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
-  @Get()
+  @Get('emergencias')
   @Roles(ROLES.ADMIN)
-  async generateReport(
+  async generateEmergencyReport(
+    @Query() filters: ReportFiltersDto,
+    @Response() res: ExpressResponse,
+  ) {
+    try {
+      console.log('Generando reporte de emergencias con filtros:', filters);
+      
+      // Validar formato
+      if (!filters.format || filters.format !== ReportFormat.PDF) {
+        throw new BadRequestException('Formato de reporte requerido: pdf');
+      }
+
+      console.log('Formato validado, iniciando generación...');
+      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm', { locale: es });
+      const baseFilename = `reporte_emergencias_${timestamp}`;
+
+      const pdfBuffer = await this.reportsService.generateEmergencyReport(filters);
+      console.log('PDF generado exitosamente, tamaño:', pdfBuffer.length);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${baseFilename}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      return res.send(pdfBuffer); 
+
+    } catch (error) {
+      console.error('Error generando reporte de emergencias:', error);
+      console.error('Stack trace:', error.stack);
+      throw new BadRequestException('Error al generar el reporte de emergencias: ' + error.message);
+    }
+  }
+
+  @Get('estadisticas')
+  @Roles(ROLES.ADMIN)
+  async generateStatisticsReport(
     @Query() filters: ReportFiltersDto,
     @Response() res: ExpressResponse,
   ) {
@@ -27,9 +61,9 @@ export class ReportsController {
       }
 
       const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm', { locale: es });
-      const baseFilename = `reporte_emergencias_${timestamp}`;
+      const baseFilename = `estadisticas_emergencias_${timestamp}`;
 
-      const pdfBuffer = await this.reportsService.generatePDFReport(filters);
+      const pdfBuffer = await this.reportsService.generateStatisticsReport(filters);
       
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${baseFilename}.pdf"`);
@@ -38,17 +72,23 @@ export class ReportsController {
       return res.send(pdfBuffer); 
 
     } catch (error) {
-      console.error('Error generando reporte:', error);
-      throw new BadRequestException('Error al generar el reporte: ' + error.message);
+      console.error('Error generando reporte de estadísticas:', error);
+      throw new BadRequestException('Error al generar el reporte de estadísticas: ' + error.message);
     }
   }
 
   @Get('preview')
   @Roles(ROLES.ADMIN)
-  async getReportPreview(@Query() filters: ReportFiltersDto) {
+  async getReportPreview(@Query() filters: Omit<ReportFiltersDto, 'format'>) {
     try {
+      // Crear filtros completos sin requerir format para preview
+      const completeFilters: ReportFiltersDto = {
+        ...filters,
+        format: ReportFormat.PDF // Default para consolidateData
+      };
+      
       // Generar solo los datos consolidados para preview
-      const data = await this.reportsService.consolidateData(filters);
+      const data = await this.reportsService.consolidateData(completeFilters);
       
       return {
         success: true,
