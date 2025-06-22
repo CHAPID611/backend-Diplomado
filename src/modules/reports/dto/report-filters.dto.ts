@@ -14,8 +14,9 @@ export enum ReportPeriod {
 }
 
 export class ReportFiltersDto {
+  @IsOptional()
   @IsEnum(ReportFormat)
-  format: ReportFormat;
+  format?: ReportFormat;
 
   @IsOptional()
   @IsEnum(ReportPeriod)
@@ -40,4 +41,8 @@ export class ReportFiltersDto {
   @IsOptional()
   @IsNumber()
   userId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  emergencyId?: number; // Para filtrar por una emergencia específica
 } 

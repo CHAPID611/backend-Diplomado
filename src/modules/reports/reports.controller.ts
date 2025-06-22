@@ -21,14 +21,31 @@ export class ReportsController {
     @Response() res: ExpressResponse,
   ) {
     try {
-      console.log('Generando reporte de emergencias con filtros:', filters);
+      console.log('=== INICIO GENERACIÓN REPORTE EMERGENCIAS ===');
+      console.log('Filtros recibidos:', JSON.stringify(filters, null, 2));
+      console.log('Tipo de filters.format:', typeof filters.format);
+      console.log('Valor de filters.format:', filters.format);
+      console.log('ReportFormat.PDF:', ReportFormat.PDF);
+      console.log('Comparación format === PDF:', filters.format === ReportFormat.PDF);
       
-      // Validar formato
-      if (!filters.format || filters.format !== ReportFormat.PDF) {
+      // Validar y normalizar formato
+      const formatValue = (filters.format as string)?.toLowerCase();
+      if (formatValue && formatValue !== 'pdf') {
+        console.error('❌ Formato inválido. Expected: pdf, Received:', formatValue);
         throw new BadRequestException('Formato de reporte requerido: pdf');
+      }
+      
+      // Asegurar que el formato esté correctamente asignado (usar PDF por defecto)
+      filters.format = ReportFormat.PDF;
+
+      // Convertir emergencyId a número si existe
+      if (filters.emergencyId) {
+        filters.emergencyId = Number(filters.emergencyId);
+        console.log('EmergencyId convertido a número:', filters.emergencyId);
       }
 
       console.log('Formato validado, iniciando generación...');
+      console.log('Filtros finales procesados:', JSON.stringify(filters, null, 2));
       const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm', { locale: es });
       const baseFilename = `reporte_emergencias_${timestamp}`;
 
@@ -75,6 +92,42 @@ export class ReportsController {
       console.error('Error generando reporte de estadísticas:', error);
       throw new BadRequestException('Error al generar el reporte de estadísticas: ' + error.message);
     }
+  }
+
+  @Get('debug')
+  async debugFilters(@Query() filters: any) {
+    console.log('=== DEBUG ENDPOINT (SIN AUTH) ===');
+    console.log('Query params recibidos:', filters);
+    console.log('Tipos:', Object.keys(filters).map(key => `${key}: ${typeof filters[key]}`));
+    
+    return {
+      success: true,
+      received: filters,
+      types: Object.keys(filters).reduce((acc, key) => {
+        acc[key] = typeof filters[key];
+        return acc;
+      }, {} as any),
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  @Get('debug-auth')
+  @Roles(ROLES.ADMIN)
+  async debugFiltersWithAuth(@Query() filters: any) {
+    console.log('=== DEBUG ENDPOINT (CON AUTH) ===');
+    console.log('Query params recibidos:', filters);
+    console.log('Tipos:', Object.keys(filters).map(key => `${key}: ${typeof filters[key]}`));
+    
+    return {
+      success: true,
+      received: filters,
+      types: Object.keys(filters).reduce((acc, key) => {
+        acc[key] = typeof filters[key];
+        return acc;
+      }, {} as any),
+      timestamp: new Date().toISOString(),
+      authenticated: true
+    };
   }
 
   @Get('preview')
