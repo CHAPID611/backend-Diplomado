@@ -23,7 +23,7 @@ export class ReportsService {
     private readonly statisticsService: StatisticsService,
   ) {}
 
-  private getDateRange(period: ReportPeriod, startDate?: string, endDate?: string) {
+  private getDateRange(period: ReportPeriod, startDate?: string, endDate?: string, isEmergencyIdFiltered: boolean = false) {
     const today = new Date();
     let start: Date;
     let end: Date = today;
@@ -45,13 +45,20 @@ export class ReportsService {
         start = subMonths(today, 12);
         break;
       case ReportPeriod.CUSTOM:
-        if (!startDate || !endDate) {
+        // Si estamos filtrando por emergencyId, no requerir fechas
+        if (!isEmergencyIdFiltered && (!startDate || !endDate)) {
           throw new BadRequestException('Las fechas de inicio y fin son requeridas para el periodo personalizado');
         }
-        start = new Date(startDate);
-        end = new Date(endDate);
-        if (end > today) {
-          throw new BadRequestException('La fecha final no puede ser mayor a la fecha actual');
+        if (startDate && endDate) {
+          start = new Date(startDate);
+          end = new Date(endDate);
+          if (end > today) {
+            throw new BadRequestException('La fecha final no puede ser mayor a la fecha actual');
+          }
+        } else {
+          // Valores por defecto cuando se usa emergencyId
+          start = subMonths(today, 12); // Un año atrás por defecto
+          end = today;
         }
         break;
       default:
@@ -69,9 +76,13 @@ export class ReportsService {
   }
 
   async consolidateData(filters: ReportFiltersDto) {
-    const { period = ReportPeriod.LAST_MONTH, startDate, endDate, emergencyTypeId, userId } = filters;
-    const { start, end } = this.getDateRange(period, startDate, endDate);
-
+    console.log('=== CONSOLIDATE DATA - INICIO ===');
+    console.log('Filtros recibidos en servicio:', JSON.stringify(filters, null, 2));
+    
+    const { period = ReportPeriod.LAST_MONTH, startDate, endDate, emergencyTypeId, userId, emergencyId } = filters;
+    
+    console.log('Variables extraídas:', { period, startDate, endDate, emergencyTypeId, userId, emergencyId });
+    
     const queryBuilder = this.emergencyRepository
       .createQueryBuilder('emergency')
       .leftJoinAndSelect('emergency.user', 'user')
@@ -80,26 +91,56 @@ export class ReportsService {
       .leftJoinAndSelect('emergency.personnel', 'personnel')
       .leftJoinAndSelect('emergency.emergencyFiles', 'emergencyFiles')
       .leftJoinAndSelect('emergency.emergenciesNovelties', 'emergenciesNovelties')
-      .leftJoinAndSelect('emergenciesNovelties.novelty', 'novelty')
-      .where('emergency.emergencyDate BETWEEN :start AND :end', { start, end });
+      .leftJoinAndSelect('emergenciesNovelties.novelty', 'novelty');
 
-    if (emergencyTypeId) {
-      queryBuilder.andWhere('emergency.emergencyType = :emergencyTypeId', {
-        emergencyTypeId,
-      });
-    }
+    // Si se especifica un ID de emergencia, filtrar solo por ese ID
+    if (emergencyId) {
+      const numericEmergencyId = Number(emergencyId);
+      queryBuilder.where('emergency.emergencyId = :emergencyId', { emergencyId: numericEmergencyId });
+      console.log('Filtrando por emergencia específica ID:', numericEmergencyId, 'tipo:', typeof numericEmergencyId);
+    } else {
+      // Si no hay ID específico, usar filtros de fecha normales
+      const { start, end } = this.getDateRange(period, startDate, endDate, false);
+      queryBuilder.where('emergency.emergencyDate BETWEEN :start AND :end', { start, end });
+      
+      if (emergencyTypeId) {
+        queryBuilder.andWhere('emergency.emergencyType = :emergencyTypeId', {
+          emergencyTypeId,
+        });
+      }
 
-    if (userId) {
-      queryBuilder.andWhere('emergency.user = :userId', {
-        userId,
-      });
+      if (userId) {
+        queryBuilder.andWhere('emergency.user = :userId', {
+          userId,
+        });
+      }
     }
 
     const emergencies = await queryBuilder
       .orderBy('emergency.emergencyDate', 'DESC')
       .getMany();
 
+    console.log('Emergencias encontradas:', emergencies.length);
+    if (emergencies.length > 0) {
+      console.log('Primera emergencia:', {
+        id: emergencies[0].emergencyId,
+        date: emergencies[0].emergencyDate,
+        type: emergencies[0].emergencyType?.emergencyType
+      });
+    }
 
+    // Determinar el período para el retorno
+    let periodStart: Date, periodEnd: Date;
+    if (emergencyId && emergencies.length > 0) {
+      // Si es una emergencia específica, usar su fecha
+      periodStart = new Date(emergencies[0].emergencyDate);
+      periodEnd = new Date(emergencies[0].emergencyDate);
+    } else {
+      // Si es un rango, usar las fechas calculadas
+      const { start, end } = this.getDateRange(period, startDate, endDate, !!emergencyId);
+      periodStart = start;
+      periodEnd = end;
+    }
 
     // Obtener estadísticas avanzadas usando el StatisticsService
     const advancedStats = await this.statisticsService.generateStatistics(filters);
@@ -111,7 +152,7 @@ export class ReportsService {
     const averageResponseTime = this.calculateAverageResponseTime(emergencies);
 
     return {
-      period: { start, end },
+      period: { start: periodStart, end: periodEnd },
       totalEmergencies,
       emergencies,
       emergenciesByType,

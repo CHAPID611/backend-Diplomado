@@ -19,7 +19,7 @@ export class SystemConfigService {
     if (!config) {
       // Si no existe, crear una configuración por defecto
       await this.createDefaultTargetTime();
-      return 15; // Valor por defecto en minutos
+      return 0; // Valor por defecto en minutos
     }
 
     return parseFloat(config.value);
